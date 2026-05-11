@@ -1,102 +1,73 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
 
-st.set_page_config(page_title="PCF") # ISSO DEVE VIR PRIMEIRO
-# --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(
-    page_title="PCF - Reconhecimento Facial", 
-    layout="wide", 
-    initial_sidebar_state="expanded"
-)
+# Configuração inicial da página
+st.set_page_config(page_title="Gestão de Inquilinos", page_icon="🏠")
 
-# --- ESTILIZAÇÃO CUSTOMIZADA ---
-st.markdown("""
-    <style>
-    .main { background-color: #f8f9fa; }
-    .stButton>button { width: 100%; border-radius: 8px; height: 3em; background-color: #070d14; color: white; }
-    </style>
-    """, unsafe_allow_html=True)
+# Inicializa a lista de inquilinos e o controle de navegação no estado da sessão
+if 'inquilinos' not in st.session_state:
+    st.session_state.inquilinos = []
 
-# --- BARRA LATERAL ---
-st.sidebar.header("🏢 PCF")
+if 'pagina' not in st.session_state:
+    st.session_state.pagina = 'home'
 
-nome_apresentador = st.sidebar.text_input("Nome do Apresentador", "Equipe PCF")
-menu = st.sidebar.selectbox("Ir para:", ["Introdução", "Simulador Biométrico", "Análise de Dados"])
+# --- Funções de Navegação ---
+def ir_para(nome_da_pagina):
+    st.session_state.pagina = nome_da_pagina
 
-st.sidebar.divider()
-exibir_detalhes = st.sidebar.checkbox("Exibir logs técnicos", value=False)
+# --- INTERFACE ---
 
-# --- LÓGICA DE NAVEGAÇÃO ---
-
-if menu == "Introdução":
-    st.title("🚀 PCF: O Futuro do Acesso Predial")
-    st.subheader(f"Apresentado por: {nome_apresentador}")
+# 1. Tela Inicial (Menu)
+if st.session_state.pagina == 'home':
+    st.title("🏠 Sistema de Gestão de Aluguel")
+    st.write("Bem-vindo! Escolha uma opção abaixo:")
     
-    col1, col2 = st.columns([2, 1])
+    col1, col2 = st.columns(2)
+    
     with col1:
-        st.markdown("""
-        Nossa solução utiliza **Visão Computacional** para transformar a segurança em prédios comerciais e residenciais. 
-        Diferenciamos automaticamente dois fluxos principais:
-        
-        * **👥 Convívio Normal:** Moradores e funcionários (Acesso Ultra Rápido).
-        * **🛠️ Especializados:** Prestadores de serviço e manutenção (Acesso Controlado).
-        """)
-        st.info("💡 *Dica: Use o menu lateral para testar o protótipo.*")
-    with col2:
-        st.markdown("O sistema opera via redes neurais convolucionais para garantir precisão de 99.9%.")
-
-elif menu == "Simulador Biométrico":
-    st.header("📸 Protótipo de Reconhecimento")
-    st.write("Abaixo simulamos a lógica de identificação de perfis.")
-
-    col_cam, col_res = st.columns([3, 2])
-    
-    with col_cam:
-        
-        
-        st.warning("Simulação de Câmera Ativada (Hardware desativado para estabilidade).")
-        simular_captura = st.button("Simular Captura de Rosto")
-
-    with col_res:
-        if simular_captura:
-            with st.status("Processando biometria...", expanded=exibir_detalhes) as status:
-                st.write("Buscando pontos nodais...")
-                time.sleep(1)
-                st.write("Consultando banco de dados...")
-                time.sleep(0.8)
-                status.update(label="Análise Concluída!", state="complete")
-
-            perfil = st.radio("Escolha o perfil para demonstrar:", ["Normal", "Especializado", "Desconhecido"])
+        if st.button("➕ Cadastrar Novo Inquilino", use_container_width=True):
+            ir_para('cadastro')
             
-            if perfil == "Normal":
-                st.success("✅ **ACESSO LIBERADO**")
-                st.markdown("### Usuário: João Silva\n**Cargo:** Analista Financeiro - Sala 402")
-            elif perfil == "Especializado":
-                st.warning("⚠️ **AGUARDANDO AUTORIZAÇÃO**")
-                st.markdown("### Empresa: Elevadores Atlas\n**Motivo:** Manutenção Preventiva")
-            else:
-                st.error("❌ **ACESSO NEGADO**")
-                st.write("Pessoa não identificada.")
+    with col2:
+        if st.button("📋 Ver Inquilinos Cadastrados", use_container_width=True):
+            ir_para('listagem')
 
-elif menu == "Análise de Dados":
-    st.header("📊 Inteligência de Tráfego")
+# 2. Tela de Cadastro
+elif st.session_state.pagina == 'cadastro':
+    st.title("📝 Cadastro de Inquilino")
     
-    chart_data = pd.DataFrame(
-        np.random.randint(1, 50, size=(24, 2)),
-        columns=['Acessos Normais', 'Acessos Especializados']
-    )
+    with st.form("form_cadastro"):
+        nome = st.text_input("Nome Completo")
+        cpf = st.text_input("CPF")
+        imovel = st.text_input("Identificação do Imóvel (Ex: Ap 102)")
+        valor = st.number_input("Valor do Aluguel (R$)", min_value=0.0, format="%.2f")
+        
+        enviado = st.form_submit_button("Salvar Cadastro")
+        
+        if enviado:
+            if nome and cpf:
+                # Salva os dados na lista
+                novo_inquilino = {"nome": nome, "cpf": cpf, "imovel": imovel, "valor": valor}
+                st.session_state.inquilinos.append(novo_inquilino)
+                st.success(f"Inquilino {nome} cadastrado com sucesso!")
+            else:
+                st.error("Por favor, preencha pelo menos o Nome e o CPF.")
 
-    st.line_chart(chart_data)
+    if st.button("⬅️ Voltar ao Menu"):
+        ir_para('home')
 
-    if exibir_detalhes:
-        st.subheader("Tabela de Registros (Logs)")
-        st.dataframe(chart_data, use_container_width=True)
+# 3. Tela de Listagem
+elif st.session_state.pagina == 'listagem':
+    st.title("📋 Inquilinos Cadastrados")
+    
+    if not st.session_state.inquilinos:
+        st.info("Nenhum inquilino cadastrado até o momento.")
+    else:
+        # Exibe os dados em uma tabela bonitinha
+        st.table(st.session_state.inquilinos)
+        
+        # Opcional: Mostrar como cartões métricos
+        st.write(f"**Total de inquilinos:** {len(st.session_state.inquilinos)}")
 
-st.divider()
-st.write("### Avaliação da Interface")
-feedback = st.select_slider("O que achou?", options=["Pode melhorar", "Bom", "Excelente", "Incrível"])
-
-if st.button("Enviar Avaliação"):
-    st.balloons()
-    st.toast(f"Feedback de {nome_apresentador} recebido!")
+    if st.button("⬅️ Voltar ao Menu"):
+        ir_para('home')
+        
