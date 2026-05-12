@@ -1,12 +1,27 @@
 import streamlit as st
+import pandas as pd
+import os
+
+# Arquivo onde os dados serão salvos permanentemente
+ARQUIVO_BANCO_DADOS = "banco_inquilinos.csv"
+
+# Função para carregar dados do arquivo CSV para o session_state
+def carregar_dados():
+    if os.path.exists(ARQUIVO_BANCO_DADOS):
+        return pd.read_csv(ARQUIVO_BANCO_DADOS).to_dict('records')
+    return []
+
+# Função para salvar dados no arquivo CSV
+def salvar_dados():
+    df = pd.DataFrame(st.session_state.inquilinos)
+    df.to_csv(ARQUIVO_BANCO_DADOS, index=False)
 
 # Configuração inicial da página
 st.set_page_config(page_title="Portaria de Controle Facilitado", page_icon="🏢")
 
-
-# Inicializa a lista de inquilinos e o controle de navegação no estado da sessão
+# Inicializa o estado da sessão carregando do arquivo
 if 'inquilinos' not in st.session_state:
-    st.session_state.inquilinos = []
+    st.session_state.inquilinos = carregar_dados()
 
 if 'pagina' not in st.session_state:
     st.session_state.pagina = 'home'
@@ -14,6 +29,7 @@ if 'pagina' not in st.session_state:
 # --- Funções de Navegação ---
 def ir_para(nome_da_pagina):
     st.session_state.pagina = nome_da_pagina
+    st.rerun() 
 
 # --- INTERFACE ---
 
@@ -21,8 +37,10 @@ def ir_para(nome_da_pagina):
 if st.session_state.pagina == 'home':
     st.title("🏢 PCF - Portaria de Controle Facilitado")
     
-    st.markdown("""PCF é uma solução de vanguarda para o controle de acesso predial, utilizando Visão Computacional e Inteligência de Dados para otimizar o fluxo de pessoas em ambientes corporativos e residenciais.""")
-    
+    #
+    st.write(""" PCF é uma solução de vanguarda para o controle de acesso predial, utilizando Visão Computacional e Inteligência de Dados para otimizar o fluxo de pessoas em ambientes corporativos e residenciais.""")    
+
+    st.write("---")
     st.write("Bem-vindo! Escolha uma opção abaixo:")
     
     col1, col2 = st.columns(2)
@@ -51,10 +69,21 @@ elif st.session_state.pagina == 'cadastro':
         
         if enviado:
             if nome and cpf:
-                # Salva os dados na lista
-                novo_inquilino = {"nome": nome, "cpf": cpf, "imovel": imovel, "valor": valor, "telefone": telefone, "rg": rg}
+                novo_inquilino = {
+                    "nome": nome, 
+                    "cpf": cpf, 
+                    "imovel": imovel, 
+                    "valor": valor, 
+                    "telefone": telefone, 
+                    "rg": rg
+                }
+                # Adiciona na lista da memória (sessão)
                 st.session_state.inquilinos.append(novo_inquilino)
-                st.success(f"Inquilino {nome} cadastrado com sucesso!")
+                
+                # Salva no arquivo fisicamente do CSV (está como banco_inquilinos.csv)
+                salvar_dados()
+                
+                st.success(f"Inquilino {nome} cadastrado e salvo no banco!")
             else:
                 st.error("Por favor, preencha pelo menos o Nome e o CPF.")
 
@@ -68,10 +97,10 @@ elif st.session_state.pagina == 'listagem':
     if not st.session_state.inquilinos:
         st.info("Nenhum inquilino cadastrado até o momento.")
     else:
-        # Exibe os dados em uma tabela bonitinha
-        st.table(st.session_state.inquilinos)
+        # Exibe os dados em uma tabela
+        df_mostrar = pd.DataFrame(st.session_state.inquilinos)
+        st.dataframe(df_mostrar, use_container_width=True)
         
-        # Opcional: Mostrar como cartões métricos
         st.write(f"**Total de inquilinos:** {len(st.session_state.inquilinos)}")
 
     if st.button("⬅️ Voltar ao Menu"):
